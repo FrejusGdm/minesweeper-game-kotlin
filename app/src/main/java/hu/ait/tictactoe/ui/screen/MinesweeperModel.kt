@@ -53,7 +53,27 @@ class MinesweeperModel : ViewModel() {
         calculateNeighboringMines()
         isGameOver = false
         isVictory = false
+        logBoardState("Board state after initialization:")
     }
+    /////////////////////////////////////// just for logging
+    private fun logBoardState(message: String = "Current Board State:") {
+        println(message)
+        for (row in board.indices) {
+            val rowString = board[row].joinToString("") { cell ->
+                when {
+                    cell.state == CellState.COVERED -> "."
+                    cell.state == CellState.FLAGGED -> "F"
+                    cell.hasMine -> "X"
+                    cell.neighboringMines > 0 -> cell.neighboringMines.toString()
+                    else -> "0"
+                }
+            }
+            println(rowString)
+        }
+        println()
+    }
+
+    ///////////////////////just for logging
 
     private fun placeMines() {
         var minesPlaced = 0
@@ -65,8 +85,11 @@ class MinesweeperModel : ViewModel() {
                     newBoard[row][col] = newBoard[row][col].copy(hasMine = true)
                 }
                 minesPlaced++
+                println("Mine placed at ($row, $col)")
             }
         }
+        logBoardState("Board state after placing mines:")
+        println("Total mines placed: $minesPlaced")
     }
 
     private fun calculateNeighboringMines() {
@@ -80,24 +103,43 @@ class MinesweeperModel : ViewModel() {
             }
         }
     }
-
     private fun countNeighboringMines(row: Int, col: Int): Int {
         var count = 0
+        println("Counting neighbors for cell at ($row, $col)")
         for (i in -1..1) {
             for (j in -1..1) {
+                if (i == 0 && j == 0) continue  // Skip the current cell
                 val newRow = row + i
                 val newCol = col + j
-                if (newRow in board.indices && newCol in board[0].indices && board[newRow][newCol].hasMine) {
-                    count++
+                if (newRow in board.indices && newCol in board[0].indices) {
+                    if (board[newRow][newCol].hasMine) {
+                        count++
+                        println("Mine found at ($newRow, $newCol)")
+                    }
                 }
             }
         }
+        println("Total neighboring mines: $count")
         return count
     }
+//    private fun countNeighboringMines(row: Int, col: Int): Int {
+//        var count = 0
+//        for (i in -1..1) {
+//            for (j in -1..1) {
+//                val newRow = row + i
+//                val newCol = col + j
+//                if (newRow in board.indices && newCol in board[0].indices && board[newRow][newCol].hasMine) {
+//                    count++
+//                }
+//            }
+//        }
+//        return count
+//    }
 
     fun onCellClicked(row: Int, col: Int): CellClickResult {
+        println("Cell clicked at ($row, $col)")
         if (isGameOver) return CellClickResult.NoEffect
-
+        logBoardState("Board state after click at ($row, $col):")
         return if (isFlagMode) {
             handleFlagMode(row, col)
         } else {
@@ -112,16 +154,22 @@ class MinesweeperModel : ViewModel() {
             when (cell.state) {
                 CellState.COVERED -> {
                     newBoard[row][col] = cell.copy(state = CellState.FLAGGED)
+                    println("Flag placed at ($row, $col)")
                     if (checkVictory(newBoard)) {
                         isGameOver = true
                         isVictory = true
                         result = CellClickResult.Victory
+                        println("Victory achieved!")
                     }
                 }
                 CellState.FLAGGED -> newBoard[row][col] = cell.copy(state = CellState.COVERED)
+
+
                 CellState.UNCOVERED -> {} // Do nothing if already uncovered
             }
+            println("Flag removed from ($row, $col)")
         }
+        logBoardState("Board state after flag action at ($row, $col):")
         return result
     }
 
@@ -147,7 +195,9 @@ class MinesweeperModel : ViewModel() {
                             } else {
                                 CellClickResult.CellsCleared(clearedCells)
                             }
+
                         }
+
                     }
                 }
                 CellState.FLAGGED -> {
@@ -165,25 +215,51 @@ class MinesweeperModel : ViewModel() {
     }
 
     private fun uncoverAdjacentCells(row: Int, col: Int, board: Array<Array<Cell>>): Int {
-        var clearedCells = 1
-        for (i in -1..1) {
-            for (j in -1..1) {
-                val newRow = row + i
-                val newCol = col + j
-                if (newRow in board.indices && newCol in board[0].indices) {
-                    val adjacentCell = board[newRow][newCol]
-                    if (adjacentCell.state == CellState.COVERED && !adjacentCell.hasMine) {
-                        board[newRow][newCol] = adjacentCell.copy(state = CellState.UNCOVERED)
-                        clearedCells++
-                        if (adjacentCell.neighboringMines == 0) {
-                            clearedCells += uncoverAdjacentCells(newRow, newCol, board)
-                        }
-                    }
+        var clearedCells = 0
+        if (row !in board.indices || col !in board[0].indices || board[row][col].state != CellState.COVERED) {
+            return clearedCells
+        }
+
+        board[row][col] = board[row][col].copy(state = CellState.UNCOVERED)
+        clearedCells++
+        println("Uncovered cell at ($row, $col)")
+
+
+        if (board[row][col].neighboringMines == 0) {
+            println("Cell ($row, $col) has no neighboring mines. Uncovering adjacent cells.")
+            for (i in -1..1) {
+                for (j in -1..1) {
+                    if (i == 0 && j == 0) continue
+                    clearedCells += uncoverAdjacentCells(row + i, col + j, board)
                 }
             }
+            logBoardState("Board state after uncovering adjacent cells from ($row, $col):")
         }
+
         return clearedCells
     }
+//    private fun uncoverAdjacentCells(row: Int, col: Int, board: Array<Array<Cell>>): Int {
+//        var clearedCells = 1
+//        for (i in -1..1) {
+//            for (j in -1..1) {
+//                val newRow = row + i
+//                val newCol = col + j
+//                if (newRow in board.indices && newCol in board[0].indices) {
+//                    val adjacentCell = board[newRow][newCol]
+//                    if (adjacentCell.state == CellState.COVERED && !adjacentCell.hasMine) {
+//                        board[newRow][newCol] = adjacentCell.copy(state = CellState.UNCOVERED)
+//                        clearedCells++
+//                        if (adjacentCell.neighboringMines == 0) {
+//                            clearedCells += uncoverAdjacentCells(newRow, newCol, board)
+//                        }
+//                        logBoardState("Board state after uncovering adjacent cells from ($row, $col):")
+//
+//                    }
+//                }
+//            }
+//        }
+//        return clearedCells
+//    }
 
     private fun checkVictory(board: Array<Array<Cell>>): Boolean {
         return board.all { row ->
@@ -199,7 +275,10 @@ class MinesweeperModel : ViewModel() {
     }
 
     fun resetGame() {
+        println("Resetting the game...")
         initializeBoard()
+        println("Game reset complete.")
+
     }
 }
 //class MinesweeperModel : ViewModel() {
