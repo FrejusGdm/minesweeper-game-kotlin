@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">TicTacToe</string>
+    <string name="btn_reset">Újraindít</string>
+    <string name="text_current_player">Az aktuális játékos: %1$s</string>
+    <string name="flag_mode">Flag Mode in Hungarian:</string>
+    <string name="reset_game">Reset Game in Hungarian</string>
+    <string name="background_description">Dragon Ball background in Hungarian</string>
+    <string name="victory">Victory! in Hungarian</string>
+    <string name="game_over">Game Over in Hungarian</string>
+    <string name="you_won">You won! in Hungarian</string>
+    <string name="you_hit_mine">You hit a mine! in Hungarian</string>
+    <string name="play_again">Play Again in Hungarian</string>
+
+</resources>
