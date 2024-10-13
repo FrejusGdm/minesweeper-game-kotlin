@@ -8,6 +8,6 @@
     <string name="victory">Victory!</string>
     <string name="game_over">Game Over</string>
     <string name="you_won">You won!</string>
-    <string name="you_hit_mine">You hit a mine!</string>
+    <string name="you_hit_mine">You hit a mine! (TryMode) Or a cell without mine (FlagMode)</string>
     <string name="play_again">Play Again</string>
 </resources>

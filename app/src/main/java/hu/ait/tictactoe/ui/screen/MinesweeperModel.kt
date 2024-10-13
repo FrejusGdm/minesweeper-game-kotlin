@@ -122,22 +122,10 @@ class MinesweeperModel : ViewModel() {
         println("Total neighboring mines: $count")
         return count
     }
-//    private fun countNeighboringMines(row: Int, col: Int): Int {
-//        var count = 0
-//        for (i in -1..1) {
-//            for (j in -1..1) {
-//                val newRow = row + i
-//                val newCol = col + j
-//                if (newRow in board.indices && newCol in board[0].indices && board[newRow][newCol].hasMine) {
-//                    count++
-//                }
-//            }
-//        }
-//        return count
-//    }
+
 
     fun onCellClicked(row: Int, col: Int): CellClickResult {
-        println("Cell clicked at ($row, $col)")
+        println("Cell clicked at ($row, $col). Current mode: ${if (isFlagMode) "Flag Mode" else "Try Mode"}")
         if (isGameOver) return CellClickResult.NoEffect
         logBoardState("Board state after click at ($row, $col):")
         return if (isFlagMode) {
@@ -147,30 +135,81 @@ class MinesweeperModel : ViewModel() {
         }
     }
 
-    private fun handleFlagMode(row: Int, col: Int): CellClickResult {
-        var result: CellClickResult = CellClickResult.NoEffect
-        updateBoard { newBoard ->
-            val cell = newBoard[row][col]
-            when (cell.state) {
-                CellState.COVERED -> {
-                    newBoard[row][col] = cell.copy(state = CellState.FLAGGED)
-                    println("Flag placed at ($row, $col)")
-                    if (checkVictory(newBoard)) {
-                        isGameOver = true
-                        isVictory = true
-                        result = CellClickResult.Victory
-                        println("Victory achieved!")
+//    private fun handleFlagMode(row: Int, col: Int): CellClickResult {
+//        var result: CellClickResult = CellClickResult.NoEffect
+//        updateBoard { newBoard ->
+//            val cell = newBoard[row][col]
+//            when (cell.state) {
+//                CellState.COVERED -> {
+//                    newBoard[row][col] = cell.copy(state = CellState.FLAGGED)
+//                    println("Flag placed at ($row, $col)")
+//                    if (checkVictory(newBoard)) {
+//                        isGameOver = true
+//                        isVictory = true
+//                        result = CellClickResult.Victory
+//                        println("Victory achieved!")
+//                    }
+//                }
+//                CellState.FLAGGED -> newBoard[row][col] = cell.copy(state = CellState.COVERED)
+//
+//
+//                CellState.UNCOVERED -> {} // Do nothing if already uncovered
+//            }
+//            println("Flag removed from ($row, $col)")
+//        }
+//        logBoardState("Board state after flag action at ($row, $col):")
+//        return result
+//    }
+private fun handleFlagMode(row: Int, col: Int): CellClickResult {
+    var result: CellClickResult = CellClickResult.NoEffect
+    updateBoard { newBoard ->
+        val cell = newBoard[row][col]
+        when (cell.state) {
+            CellState.COVERED -> {
+                newBoard[row][col] = cell.copy(state = CellState.FLAGGED)
+                println("Flag placed at ($row, $col)")
+                if (!cell.hasMine) {
+                    // End game if flagged field has no mine
+                    isGameOver = true
+                    result = CellClickResult.GameOver("Game over! You flagged a non-mine cell.")
+                    println("Game over: Flagged a non-mine cell at ($row, $col)")
+                } else if (checkAllMinesFlagged(newBoard)) {
+                    // Win condition: all mines are flagged
+                    isGameOver = true
+                    isVictory = true
+                    result = CellClickResult.Victory
+                    println("Victory achieved! All mines correctly flagged.")
+                }
+            }
+            CellState.FLAGGED -> {
+                newBoard[row][col] = cell.copy(state = CellState.COVERED)
+                println("Flag removed from ($row, $col)")
+            }
+            CellState.UNCOVERED -> {
+                // Do nothing if already uncovered
+                println("Cannot flag an uncovered cell at ($row, $col)")
+            }
+        }
+    }
+    logBoardState("Board state after flag action at ($row, $col):")
+    return result
+}
+
+    //  helper function to check if all mines are flagged
+    private fun checkAllMinesFlagged(board: Array<Array<Cell>>): Boolean {
+        var flaggedMines = 0
+        var totalMines = 0
+        board.forEach { row ->
+            row.forEach { cell ->
+                if (cell.hasMine) {
+                    totalMines++
+                    if (cell.state == CellState.FLAGGED) {
+                        flaggedMines++
                     }
                 }
-                CellState.FLAGGED -> newBoard[row][col] = cell.copy(state = CellState.COVERED)
-
-
-                CellState.UNCOVERED -> {} // Do nothing if already uncovered
             }
-            println("Flag removed from ($row, $col)")
         }
-        logBoardState("Board state after flag action at ($row, $col):")
-        return result
+        return flaggedMines == totalMines && flaggedMines == minesCount
     }
 
     private fun handleTryMode(row: Int, col: Int): CellClickResult {
@@ -238,6 +277,7 @@ class MinesweeperModel : ViewModel() {
 
         return clearedCells
     }
+
 //    private fun uncoverAdjacentCells(row: Int, col: Int, board: Array<Array<Cell>>): Int {
 //        var clearedCells = 1
 //        for (i in -1..1) {
@@ -261,14 +301,22 @@ class MinesweeperModel : ViewModel() {
 //        return clearedCells
 //    }
 
-    private fun checkVictory(board: Array<Array<Cell>>): Boolean {
-        return board.all { row ->
-            row.all { cell ->
-                (cell.hasMine && (cell.state == CellState.COVERED || cell.state == CellState.FLAGGED)) ||
-                        (!cell.hasMine && cell.state == CellState.UNCOVERED)
-            }
+//    private fun checkVictory(board: Array<Array<Cell>>): Boolean {
+//        return board.all { row ->
+//            row.all { cell ->
+//                (cell.hasMine && (cell.state == CellState.COVERED || cell.state == CellState.FLAGGED)) ||
+//                        (!cell.hasMine && cell.state == CellState.UNCOVERED)
+//            }
+//        }
+//    }
+private fun checkVictory(board: Array<Array<Cell>>): Boolean {
+    return board.all { row ->
+        row.all { cell ->
+            (cell.hasMine && cell.state == CellState.FLAGGED) ||
+                    (!cell.hasMine && cell.state == CellState.UNCOVERED)
         }
-    }
+    } || checkAllMinesFlagged(board)
+}
 
     fun toggleFlagMode() {
         isFlagMode = !isFlagMode
@@ -277,10 +325,19 @@ class MinesweeperModel : ViewModel() {
     fun resetGame() {
         println("Resetting the game...")
         initializeBoard()
+        isGameOver = false
+        isVictory = false
+        isFlagMode = false
         println("Game reset complete.")
 
     }
 }
+
+
+
+
+
+
 //class MinesweeperModel : ViewModel() {
 //    var board by mutableStateOf(Array(5) { Array(5) { Cell() } })
 //    var isGameOver by mutableStateOf(false)
